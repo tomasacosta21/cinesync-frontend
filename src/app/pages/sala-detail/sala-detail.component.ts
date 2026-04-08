@@ -197,7 +197,7 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
       const b = this.sala?.butacas.find(b => b.id === butacaId);
       if (b) b.estado = 'LIBRE';
 
-      this.salaService.reservar(this.salaId, {
+      this.salaService.reservarDirecto(this.salaId, {
         usuarioId: this.userId,
         butacaId
       }).subscribe({
