@@ -19,8 +19,23 @@ export class SalaService {
     return this.http.get<Sala>(`${this.base}/${id}`);
   }
 
+  /**
+   * Reserva asíncrona via cola — usada por la simulación (bots).
+   * Siempre retorna exitoso=true, no refleja el resultado real del CAS.
+   */
   reservar(salaId: number, req: ReservaRequest): Observable<ReservaResponse> {
     return this.http.post<ReservaResponse>(`${this.base}/${salaId}/reservar`, req);
+  }
+
+  /**
+   * Reserva SÍNCRONA con resultado real del CAS.
+   * Usada por usuarios reales para mostrar victoria/derrota.
+   *
+   * exitoso=true  → el usuario ganó la carrera → toast verde
+   * exitoso=false → otro hilo se adelantó      → toast rojo
+   */
+  reservarDirecto(salaId: number, req: ReservaRequest): Observable<ReservaResponse> {
+    return this.http.post<ReservaResponse>(`${this.base}/${salaId}/reservar-directo`, req);
   }
 
   confirmar(salaId: number, butacaId: string): Observable<ReservaResponse> {
