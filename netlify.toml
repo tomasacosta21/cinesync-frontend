@@ -1,5 +1,5 @@
 [build]
-  command = "bash set-env.sh && npm run build:prod"
+  command = "npm run build:prod"
   publish = "dist/cinesync-frontend/browser"
 
 [[redirects]]
