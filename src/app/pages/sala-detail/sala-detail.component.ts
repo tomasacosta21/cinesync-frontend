@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -6,15 +6,18 @@ import { SalaService } from '../../core/services/sala.service';
 import { SseService } from '../../core/services/sse.service';
 import { ProyeccionService } from '../../core/services/proyeccion.service';
 import { Sala, Butaca, EstadoButaca } from '../../core/models/sala.model';
+import { ToastComponent } from '../../shared/components/toast/toast.component';
 
 @Component({
   selector: 'app-sala-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ToastComponent],
   templateUrl: './sala-detail.component.html',
   styleUrls: ['./sala-detail.component.scss']
 })
 export class SalaDetailComponent implements OnInit, OnDestroy {
+
+  @ViewChild(ToastComponent) toast!: ToastComponent;
 
   sala?: Sala;
   cargando = true;
@@ -27,7 +30,7 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
   timerSegundos    = 0;
   timerDisplay     = '5:00';
   private timerInterval?: ReturnType<typeof setInterval>;
-  private readonly DURACION_SIMULACION = 300; // 5 minutos
+  private readonly DURACION_SIMULACION = 300;
 
   // ── Race condition manual ─────────────────────────────────
   raceEnProgreso = false;
@@ -57,7 +60,6 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
     this.sseSub?.unsubscribe();
     this.sseService.desconectar();
     this.pararTimer();
-    // Detiene la simulación en el backend al salir de la sala
     this.proyeccionService.detenerSimulacion(this.salaId).subscribe();
   }
 
@@ -69,7 +71,7 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
         this.sala = sala;
         this.cargando = false;
         this.suscribirSSE();
-        this.iniciarSimulacion(); // arranca automáticamente
+        this.iniciarSimulacion();
       },
       error: () => { this.cargando = false; this.error = true; }
     });
@@ -83,9 +85,17 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
         if (!this.sala || evento.salaId !== this.salaId) return;
         const butaca = this.sala.butacas.find(b => b.id === evento.butacaId);
         if (!butaca) return;
-        if (evento.estado !== 'LIBRE' && this.seleccionadas.has(butaca.id)) {
+
+        const eraSeleccionadaMia = this.seleccionadas.has(butaca.id);
+        const estabaLibre = butaca.estado === 'LIBRE' || butaca.estado === 'SELECCIONADA';
+
+        // Si alguien más tomó una butaca que yo tenía seleccionada
+        if (evento.estado === 'RESERVADA' && eraSeleccionadaMia && estabaLibre) {
           this.seleccionadas.delete(butaca.id);
+          // El toast de derrota ya se maneja en confirmarReserva()
+          // Este caso es cuando el SSE llega ANTES de que yo confirmara
         }
+
         butaca.estado = evento.estado;
         this.ultimoEvento = `${evento.butacaId} → ${evento.estado}`;
         setTimeout(() => { this.ultimoEvento = ''; }, 2000);
@@ -94,7 +104,7 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Simulación automática ─────────────────────────────────
+  // ── Simulación ────────────────────────────────────────────
 
   private iniciarSimulacion(): void {
     this.proyeccionService.iniciarSimulacion(this.salaId).subscribe({
@@ -111,15 +121,12 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
           }
         }, 1000);
       },
-      error: () => {} // silencioso si el backend no está disponible
+      error: () => {}
     });
   }
 
   private pararTimer(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = undefined;
-    }
+    if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = undefined; }
   }
 
   private actualizarDisplay(): void {
@@ -168,20 +175,56 @@ export class SalaDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Confirma la reserva de las butacas seleccionadas.
+   *
+   * El backend retorna exitoso: true/false según el resultado del CAS.
+   * Si exitoso === true  → el usuario ganó la carrera → toast de victoria.
+   * Si exitoso === false → otro hilo se adelantó    → toast de derrota.
+   *
+   * Esta es la demostración central del concepto de race condition:
+   * dos usuarios pueden intentar reservar la misma butaca simultáneamente,
+   * pero el ReentrantLock + AtomicReference garantizan que solo uno gana.
+   */
   confirmarReserva(): void {
     if (!this.sala || !this.seleccionadas.size) return;
+
     const ids = Array.from(this.seleccionadas);
     this.seleccionadas.clear();
+
     ids.forEach(butacaId => {
-      this.salaService.reservar(this.salaId, { usuarioId: this.userId, butacaId })
-        .subscribe(resp => {
+      // Optimistamente quitamos la selección visual
+      const b = this.sala?.butacas.find(b => b.id === butacaId);
+      if (b) b.estado = 'LIBRE';
+
+      this.salaService.reservar(this.salaId, {
+        usuarioId: this.userId,
+        butacaId
+      }).subscribe({
+        next: resp => {
           if (resp.exitoso) {
-            setTimeout(() => this.salaService.confirmar(this.salaId, butacaId).subscribe(), 1500);
+            // ── VICTORIA: el usuario ganó el CAS ─────────────────────────
+            this.toast.victoria(butacaId);
+
+            // Confirma la compra después de 1.5s (simula paso de pago)
+            setTimeout(() => {
+              this.salaService.confirmar(this.salaId, butacaId).subscribe();
+            }, 1500);
+
           } else {
-            const b = this.sala?.butacas.find(b => b.id === butacaId);
-            if (b) b.estado = 'LIBRE';
+            // ── DERROTA: otro hilo se adelantó ───────────────────────────
+            this.toast.derrota(butacaId);
+            // La butaca ya quedó en LIBRE arriba — el SSE la actualizará
+            // con el estado real (RESERVADA por el ganador)
           }
-        });
+        },
+        error: () => {
+          this.toast.info(
+            'Error de conexión',
+            `No se pudo procesar la reserva de ${butacaId}. Intentá de nuevo.`
+          );
+        }
+      });
     });
   }
 
