@@ -21,7 +21,7 @@ out-tsc/
 *.sw?
 
 # environment overrides (never commit production URLs)
-src/environments/environment.production.ts
+
 
 # misc
 .DS_Store
