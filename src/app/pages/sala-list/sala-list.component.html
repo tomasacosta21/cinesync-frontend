@@ -1,0 +1,108 @@
+<div class="page">
+
+  <!-- ── Hero ──────────────────────────────────────────────── -->
+  <header class="hero">
+    <div class="hero-scanline"></div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">Sistema de reservas</p>
+      <h1 class="hero-title">CINESYNC</h1>
+      <p class="hero-sub">Seleccioná tu sala y elegí tu butaca en tiempo real</p>
+    </div>
+    <div class="hero-decoracion">
+      <span class="circulo c1"></span>
+      <span class="circulo c2"></span>
+      <span class="circulo c3"></span>
+    </div>
+  </header>
+
+  <!-- ── Loading ───────────────────────────────────────────── -->
+  <div class="loading-wrap" *ngIf="cargando">
+    <div class="loading-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <p>Conectando con el sistema...</p>
+  </div>
+
+  <!-- ── Grid de salas ─────────────────────────────────────── -->
+  <main class="salas-grid" *ngIf="!cargando">
+    <article
+      class="sala-card"
+      *ngFor="let sala of salas; let i = index"
+      [class]="'sala-card sala-card--' + sala.id"
+      [style.animation-delay]="(i * 120) + 'ms'"
+      (click)="irAProyecciones(sala.id)"
+      role="button"
+      [attr.aria-label]="'Ver sala ' + sala.nombre"
+    >
+      <!-- Barra de acento lateral -->
+      <div class="card-accent"></div>
+
+      <!-- Cabecera -->
+      <div class="card-header">
+        <span class="card-tag">{{ etiquetaSala(sala.id) }}</span>
+        <span class="card-numero">0{{ sala.id }}</span>
+      </div>
+
+      <!-- Nombre -->
+      <h2 class="card-nombre">{{ sala.nombre | uppercase }}</h2>
+
+      <!-- Mini visualización de butacas -->
+      <div class="card-preview">
+        <div
+          class="preview-grid"
+          [style.grid-template-columns]="'repeat(' + sala.columnas + ', 1fr)'"
+        >
+          <span
+            *ngFor="let b of sala.butacas"
+            class="preview-dot"
+            [class.preview-dot--libre]="b.estado === 'LIBRE'"
+            [class.preview-dot--reservada]="b.estado === 'RESERVADA'"
+            [class.preview-dot--ocupada]="b.estado === 'OCUPADA'"
+          ></span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="card-stats">
+        <div class="stat">
+          <span class="stat-val">{{ sala.filas * sala.columnas }}</span>
+          <span class="stat-lbl">butacas</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val libre-color">{{ contarPorEstado(sala, 'LIBRE') }}</span>
+          <span class="stat-lbl">disponibles</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val ocupada-color">{{ contarPorEstado(sala, 'OCUPADA') }}</span>
+          <span class="stat-lbl">ocupadas</span>
+        </div>
+      </div>
+
+      <!-- Barra de ocupación -->
+      <div class="ocupacion-wrap">
+        <div class="ocupacion-bar">
+          <div
+            class="ocupacion-fill"
+            [style.width]="porcentajeOcupacion(sala) + '%'"
+          ></div>
+        </div>
+        <span class="ocupacion-pct">{{ porcentajeOcupacion(sala) }}% ocupada</span>
+      </div>
+
+      <!-- CTA -->
+      <div class="card-cta">
+        <span>Ver sala</span>
+        <span class="cta-arrow">→</span>
+      </div>
+
+    </article>
+  </main>
+
+  <!-- ── Footer ────────────────────────────────────────────── -->
+  <footer class="page-footer">
+    <span>CineSync · Reservas en tiempo real</span>
+    <span class="footer-dot">·</span>
+    <span>Programación Concurrente — Siglo 21</span>
+  </footer>
+
+</div>

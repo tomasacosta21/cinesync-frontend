@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════════════════════
+   CINESYNC — Estilos globales
+   Estética: sala de cine en penumbra, póster de película
+   Tipografía: Bebas Neue (display) + DM Sans (cuerpo)
+═══════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+/* ── Variables de diseño ──────────────────────────────────── */
+:root {
+  /* Paleta */
+  --negro:        #080808;
+  --negro-sala:   #0e0e0e;
+  --gris-oscuro:  #1a1a1a;
+  --gris-medio:   #2a2a2a;
+  --gris-borde:   #333333;
+  --gris-texto:   #888888;
+  --blanco:       #f0ece4;      /* blanco cálido, no frío */
+  --blanco-dim:   rgba(240,236,228,0.5);
+
+  /* Colores de estado — sistema semáforo del cine */
+  --libre:        #2a2a2a;
+  --libre-hover:  #3d3d3d;
+  --libre-borde:  #444444;
+  --reservada:    #c17f24;      /* ámbar cálido */
+  --reservada-bg: rgba(193,127,36,0.15);
+  --ocupada:      #8b1a1a;      /* rojo sangre oscuro */
+  --ocupada-bg:   rgba(139,26,26,0.2);
+  --seleccionada: #1a5c2e;      /* verde oscuro */
+  --seleccionada-bg: rgba(26,92,46,0.2);
+  --seleccionada-glow: rgba(46,196,98,0.3);
+
+  /* Acento principal */
+  --rojo-cine:    #e50914;
+  --rojo-oscuro:  #8b0000;
+
+  /* Tipografía */
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+
+  /* Espaciado */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* Transiciones */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-med:  300ms;
+}
+
+/* ── Reset ────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--negro);
+  color: var(--blanco);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  /* Textura sutil de grano cinematográfico */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: var(--negro); }
+::-webkit-scrollbar-thumb        { background: var(--gris-borde); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--gris-texto); }
+
+/* ── Tipografía base ──────────────────────────────────────── */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--blanco);
+}
+
+p, span, li { line-height: 1.6; }
+
+/* ── Utilidades ───────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+/* ── Animaciones globales ─────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--seleccionada-glow); }
+  50%       { box-shadow: 0 0 0 6px transparent; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes blink-badge {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}

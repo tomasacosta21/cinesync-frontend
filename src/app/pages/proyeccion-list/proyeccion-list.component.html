@@ -1,0 +1,211 @@
+<div class="proy-page">
+
+  <!-- ══ Header ══════════════════════════════════════════════ -->
+  <header class="proy-header">
+    <div class="header-izq">
+      <button class="btn-back" (click)="volver()">
+        <span>←</span><span>Salas</span>
+      </button>
+      <div *ngIf="sala">
+        <p class="header-eyebrow">Sala {{ sala.id }}</p>
+        <h1 class="header-titulo">{{ sala.nombre | uppercase }}</h1>
+      </div>
+    </div>
+    <div class="header-tabs">
+      <button class="tab" [class.tab--activo]="vista === 'cartelera'" (click)="vista = 'cartelera'">
+        Cartelera
+      </button>
+      <button class="tab" [class.tab--activo]="vista === 'abm'" (click)="vista = 'abm'; abrirFormNuevo()">
+        + Nueva proyección
+      </button>
+    </div>
+  </header>
+
+  <!-- ══ VISTA: CARTELERA ═════════════════════════════════════ -->
+  <div class="proy-body" *ngIf="vista === 'cartelera'">
+
+    <div class="loading-wrap" *ngIf="cargando">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <div class="sin-funciones" *ngIf="!cargando && proyecciones.length === 0">
+      <p>No hay proyecciones programadas para esta sala.</p>
+      <button class="btn-primary" (click)="vista = 'abm'; abrirFormNuevo()">
+        Agregar proyección
+      </button>
+    </div>
+
+    <div class="cartelera-layout" *ngIf="!cargando && proyecciones.length > 0">
+
+      <!-- Lista de funciones -->
+      <div class="funciones-lista">
+        <div
+          *ngFor="let p of proyecciones"
+          class="funcion-card"
+          [class.funcion-card--activo]="proyeccionSeleccionada?.id === p.id"
+          (click)="seleccionarProyeccion(p)"
+        >
+          <div class="funcion-poster">
+            <img
+              [src]="peliculaDe(p)?.imagen || ''"
+              [alt]="p.peliculaTitulo"
+              onerror="this.style.display='none'"
+            />
+            <div class="funcion-poster-fallback">
+              {{ p.peliculaTitulo.substring(0,2).toUpperCase() }}
+            </div>
+          </div>
+
+          <div class="funcion-info">
+            <p class="funcion-titulo">{{ p.peliculaTitulo }}</p>
+            <p class="funcion-fecha">{{ formatearFecha(p.fechaHora) }}</p>
+            <p class="funcion-hora">{{ formatearHora(p.fechaHora) }}</p>
+            <div class="funcion-footer">
+              <span class="funcion-precio">{{ precioFormateado(p.precioBase) }}</span>
+              <span class="badge" [class]="badgeEstado(p.estado)">
+                {{ etiquetaEstado(p.estado) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="funcion-acciones">
+            <button class="btn-icon" title="Editar"
+              (click)="$event.stopPropagation(); abrirFormEditar(p)">✎</button>
+            <button class="btn-icon btn-icon--danger" title="Cancelar"
+              (click)="$event.stopPropagation(); cancelar(p.id)">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel de detalle de la proyección seleccionada -->
+      <div class="detalle-panel" *ngIf="proyeccionSeleccionada && peliculaSeleccionada">
+
+        <div class="detalle-poster">
+          <img
+            [src]="peliculaSeleccionada.imagen"
+            [alt]="peliculaSeleccionada.titulo"
+            onerror="this.style.display='none'"
+          />
+        </div>
+
+        <div class="detalle-body">
+          <div class="detalle-meta">
+            <span class="detalle-genero">{{ peliculaSeleccionada.genero }}</span>
+            <span class="detalle-clasif">{{ peliculaSeleccionada.clasificacion }}</span>
+            <span class="detalle-dur">{{ peliculaSeleccionada.duracionMinutos }} min</span>
+          </div>
+
+          <h2 class="detalle-titulo">{{ peliculaSeleccionada.titulo }}</h2>
+          <p class="detalle-director">Dir. {{ peliculaSeleccionada.director }}</p>
+          <p class="detalle-sinopsis">{{ peliculaSeleccionada.sinopsis }}</p>
+
+          <div class="detalle-funcion-info">
+            <div class="dfi-item">
+              <span class="dfi-lbl">Fecha</span>
+              <span class="dfi-val">{{ formatearFecha(proyeccionSeleccionada.fechaHora) }}</span>
+            </div>
+            <div class="dfi-item">
+              <span class="dfi-lbl">Hora</span>
+              <span class="dfi-val">{{ formatearHora(proyeccionSeleccionada.fechaHora) }}</span>
+            </div>
+            <div class="dfi-item">
+              <span class="dfi-lbl">Precio</span>
+              <span class="dfi-val">{{ precioFormateado(proyeccionSeleccionada.precioBase) }}</span>
+            </div>
+          </div>
+
+          <button
+            class="btn-comprar"
+            [disabled]="proyeccionSeleccionada.estado === 'CANCELADA' || proyeccionSeleccionada.estado === 'FINALIZADA'"
+            (click)="irASala(proyeccionSeleccionada)"
+          >
+            Seleccionar butaca →
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Estado vacío del panel detalle -->
+      <div class="detalle-vacio" *ngIf="!proyeccionSeleccionada">
+        <p>Seleccioná una función para ver el detalle</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ VISTA: ABM ══════════════════════════════════════════ -->
+  <div class="proy-body proy-body--abm" *ngIf="vista === 'abm'">
+
+    <div class="form-card">
+      <h2 class="form-titulo">
+        {{ editandoId ? 'Editar proyección' : 'Nueva proyección' }}
+      </h2>
+
+      <div class="form-grid">
+
+        <!-- Película -->
+        <div class="campo campo--full">
+          <label class="campo-label">Película</label>
+          <select class="campo-input" [(ngModel)]="formulario.peliculaId">
+            <option *ngFor="let p of peliculas" [value]="p.id">
+              {{ p.titulo }} ({{ p.duracionMinutos }} min)
+            </option>
+          </select>
+        </div>
+
+        <!-- Fecha y hora -->
+        <div class="campo">
+          <label class="campo-label">Fecha y hora</label>
+          <input
+            class="campo-input"
+            type="datetime-local"
+            [(ngModel)]="formulario.fechaHora"
+          />
+        </div>
+
+        <!-- Precio -->
+        <div class="campo">
+          <label class="campo-label">Precio base ($)</label>
+          <input
+            class="campo-input"
+            type="number"
+            min="0"
+            step="100"
+            [(ngModel)]="formulario.precioBase"
+          />
+        </div>
+
+      </div>
+
+      <!-- Preview de la película seleccionada -->
+      <div class="preview-pelicula" *ngIf="formulario.peliculaId">
+        <ng-container *ngFor="let p of peliculas">
+          <div class="preview-inner" *ngIf="p.id === formulario.peliculaId">
+            <img [src]="p.imagen" [alt]="p.titulo" onerror="this.style.display='none'" />
+            <div class="preview-data">
+              <p class="preview-titulo">{{ p.titulo }}</p>
+              <p class="preview-meta">{{ p.director }} · {{ p.genero }}</p>
+              <p class="preview-meta">{{ p.duracionMinutos }} min · {{ p.clasificacion }}</p>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- Mensaje de feedback -->
+      <p class="form-mensaje" *ngIf="mensajeForm" [class.form-mensaje--ok]="mensajeForm.includes('éxito')">
+        {{ mensajeForm }}
+      </p>
+
+      <div class="form-acciones">
+        <button class="btn-secondary" (click)="vista = 'cartelera'; editandoId = null">
+          Cancelar
+        </button>
+        <button class="btn-primary" [disabled]="guardando" (click)="guardar()">
+          {{ guardando ? 'Guardando...' : (editandoId ? 'Guardar cambios' : 'Crear proyección') }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>

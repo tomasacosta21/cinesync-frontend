@@ -1,0 +1,149 @@
+<div class="estado-pantalla" *ngIf="cargando">
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p>Cargando sala...</p>
+</div>
+
+<div class="estado-pantalla" *ngIf="error">
+  <p class="error-msg">No se pudo conectar con el sistema.</p>
+  <button class="btn-secondary" (click)="volver()">← Volver</button>
+</div>
+
+<div class="sala-page" *ngIf="sala && !cargando">
+
+  <!-- ══ Header ══════════════════════════════════════════════ -->
+  <header class="sala-header">
+    <div class="header-izq">
+      <button class="btn-back" (click)="volver()">
+        <span class="btn-back-arrow">←</span>
+        <span>Proyecciones</span>
+      </button>
+      <div class="header-info">
+        <p class="header-eyebrow">Sala {{ sala.id }}</p>
+        <h1 class="header-titulo">{{ sala.nombre | uppercase }}</h1>
+      </div>
+    </div>
+
+    <div class="header-der">
+
+      <!-- Timer de simulación -->
+      <div class="simulacion-badge" [class.simulacion-badge--activo]="simulacionActiva">
+        <div class="sim-dot"></div>
+        <div class="sim-info">
+          <span class="sim-label">{{ simulacionActiva ? 'Simulación activa' : 'Simulación finalizada' }}</span>
+          <span class="sim-timer" *ngIf="simulacionActiva">{{ timerDisplay }}</span>
+        </div>
+      </div>
+
+      <!-- Badge SSE -->
+      <div class="sse-badge" [class.sse-badge--activo]="ultimoEvento">
+        <span class="sse-dot"></span>
+        <span class="sse-texto">{{ ultimoEvento || 'En tiempo real' }}</span>
+      </div>
+
+      <!-- Race condition manual -->
+      <button
+        class="btn-race"
+        [disabled]="raceEnProgreso"
+        (click)="simularRaceCondition()"
+        title="Lanza 15 peticiones simultáneas sobre la misma butaca"
+      >
+        <span>⚡</span>
+        <span>{{ raceEnProgreso ? 'Simulando...' : 'Race condition' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="race-resultado" *ngIf="raceResultado">
+    <span>✓</span> {{ raceResultado }}
+  </div>
+
+  <!-- ══ Leyenda ══════════════════════════════════════════════ -->
+  <div class="leyenda">
+    <div class="leyenda-item"><span class="leyenda-dot dot--libre"></span><span>Libre</span></div>
+    <div class="leyenda-item"><span class="leyenda-dot dot--seleccionada"></span><span>Tu selección</span></div>
+    <div class="leyenda-item"><span class="leyenda-dot dot--reservada"></span><span>Reservada</span></div>
+    <div class="leyenda-item"><span class="leyenda-dot dot--ocupada"></span><span>Ocupada</span></div>
+    <div class="leyenda-sep"></div>
+    <div class="leyenda-item leyenda-item--sim" *ngIf="simulacionActiva">
+      <span class="sim-pulse"></span>
+      <span>Bot reservando automáticamente</span>
+    </div>
+  </div>
+
+  <!-- ══ Sala ════════════════════════════════════════════════ -->
+  <div class="sala-contenedor">
+    <div class="pantalla-wrap">
+      <div class="pantalla"><span class="pantalla-texto">PANTALLA</span></div>
+      <div class="pantalla-reflejo"></div>
+    </div>
+
+    <div class="grilla-wrap">
+      <div class="grilla">
+        <div class="fila" *ngFor="let filaIdx of filas()">
+          <span class="fila-label">{{ letraFila(filaIdx) }}</span>
+          <button
+            *ngFor="let butaca of butacasDeFila(filaIdx)"
+            class="butaca"
+            [class]="'butaca butaca--' + clasePara(butaca)"
+            [disabled]="butaca.estado === 'OCUPADA' || butaca.estado === 'RESERVADA'"
+            [title]="butaca.id"
+            (click)="seleccionar(butaca)"
+          >
+            <span class="butaca-respaldo"></span>
+            <span class="butaca-asiento"></span>
+          </button>
+          <span class="fila-label fila-label--der">{{ letraFila(filaIdx) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-nums">
+      <span class="col-nums-offset"></span>
+      <span *ngFor="let b of butacasDeFila(0)" class="col-num">{{ b.columna + 1 }}</span>
+    </div>
+  </div>
+
+  <!-- ══ Stats ═══════════════════════════════════════════════ -->
+  <div class="stats-barra">
+    <div class="stat-item">
+      <span class="stat-num">{{ contarPorEstado('LIBRE') }}</span>
+      <span class="stat-lbl">libres</span>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <span class="stat-num stat-num--sel">{{ seleccionadas.size }}</span>
+      <span class="stat-lbl">seleccionadas</span>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <span class="stat-num stat-num--res">{{ contarPorEstado('RESERVADA') }}</span>
+      <span class="stat-lbl">reservadas</span>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <span class="stat-num stat-num--ocu">{{ contarPorEstado('OCUPADA') }}</span>
+      <span class="stat-lbl">ocupadas</span>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="usuario-badge">
+      <span class="usuario-dot"></span>
+      <span>{{ userId }}</span>
+    </div>
+  </div>
+
+  <!-- ══ Panel de confirmación ════════════════════════════════ -->
+  <div class="panel-confirmacion" [class.panel-confirmacion--visible]="seleccionadas.size > 0">
+    <div class="panel-info">
+      <span class="panel-count">{{ seleccionadas.size }}</span>
+      <div class="panel-textos">
+        <p class="panel-titulo">{{ seleccionadas.size === 1 ? 'butaca seleccionada' : 'butacas seleccionadas' }}</p>
+        <p class="panel-ids">{{ idsSeleccionadas() }}</p>
+      </div>
+    </div>
+    <div class="panel-acciones">
+      <button class="btn-cancelar" (click)="cancelarSeleccion()">Cancelar</button>
+      <button class="btn-confirmar" (click)="confirmarReserva()">Confirmar reserva →</button>
+    </div>
+  </div>
+
+</div>

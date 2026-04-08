@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build output
+dist/
+tmp/
+out-tsc/
+
+# Angular cache
+.angular/
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# environment overrides (never commit production URLs)
+src/environments/environment.production.ts
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
