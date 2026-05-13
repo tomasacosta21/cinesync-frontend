@@ -102,20 +102,21 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
   }
 
   encolarUno(): void {
-  const filas = ['A', 'B', 'C', 'D', 'E', 'F'];
-  const fila = filas[Math.floor(Math.random() * filas.length)];
-  const col  = Math.floor(Math.random() * 10) + 1;
-  const butacaId = `${fila}${col}`;  // sin guión
+    const filas = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const fila = filas[Math.floor(Math.random() * filas.length)];
+    const col  = Math.floor(Math.random() * 10) + 1;
+    const butacaId = `${fila}${col}`;
 
-  this.http.post(`${this.api}/encolar`, {
-    salaId: 1,
-    butacaId,
-    usuarioId: 'demo-' + Math.random().toString(36).slice(2, 5)
-  }, { observe: 'response' }).subscribe({
-    next: () => this.agregarLog(`Encolando butaca ${butacaId}`, 'encolado'),
-    error: (err) => this.agregarLog('Error al encolar butaca', 'bloqueado')
-  });
-}
+    this.http.post(`${this.api}/encolar`, {
+      salaId: 1,
+      butacaId,
+      usuarioId: 'demo-' + Math.random().toString(36).slice(2, 5)
+    }).subscribe({
+      next: () => this.agregarLog(`Encolado: ${butacaId}`, 'encolado'),
+      error: () => this.agregarLog(`Error al encolar ${butacaId}`, 'bloqueado'),
+      complete: () => {}
+    });
+  }
 
   encolarLote(): void {
     this.http.post(`${this.api}/encolar-lote`, { cantidad: 8 }).subscribe({
