@@ -69,7 +69,7 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
     };
 
     this.eventSource.onmessage = handleData;
-    this.eventSource.addEventListener('semaforo', handleData);
+    this.eventSource.addEventListener('estado-semaforos', handleData);
 
     this.eventSource.onerror = () => {
       this.zone.run(() => this.agregarLog('Conexión SSE perdida, reconectando...', 'info'));
