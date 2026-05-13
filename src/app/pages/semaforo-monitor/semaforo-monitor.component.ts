@@ -111,7 +111,7 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
       salaId: 1,
       butacaId,
       usuarioId: 'demo-' + Math.random().toString(36).slice(2, 5)
-    }).subscribe({
+    }, { responseType: 'text' }).subscribe({
       next: () => this.agregarLog(`Encolado: ${butacaId}`, 'encolado'),
       error: () => this.agregarLog(`Error al encolar ${butacaId}`, 'bloqueado'),
       complete: () => {}
@@ -119,7 +119,7 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
   }
 
   encolarLote(): void {
-    this.http.post(`${this.api}/encolar-lote`, { cantidad: 8 }).subscribe({
+    this.http.post(`${this.api}/encolar-lote`, { cantidad: 8 }, { responseType: 'text' }).subscribe({
       next: () => this.agregarLog('Lote de 8 butacas encolado', 'encolado'),
       error: () => this.agregarLog('Error al encolar lote', 'bloqueado')
     });
