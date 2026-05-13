@@ -56,6 +56,14 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
     if (this.reconectarTimeout) clearTimeout(this.reconectarTimeout);
   }
 
+  private tipoDeEvento(evento: string): TipoLog {
+    if (evento.includes('BLOQUEADO'))  return 'bloqueado';
+    if (evento.includes('PRODUCIDO'))  return 'encolado';
+    if (evento.includes('PROCESANDO')) return 'procesando';
+    if (evento.includes('CONSUMIDO'))  return 'completado';
+    return 'info';
+  }
+
   private conectarSSE(): void {
     this.eventSource?.close();
     this.eventSource = new EventSource(`${this.api}/eventos`);
@@ -80,18 +88,18 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
   }
 
   private aplicarEvento(data: any): void {
-    if (data.mutex          !== undefined) this.mutex          = data.mutex;
-    if (data.vacias         !== undefined) this.vacias         = data.vacias;
-    if (data.llenas         !== undefined) this.llenas         = data.llenas;
-    if (data.bufferSize     !== undefined) this.bufferSize     = data.bufferSize;
-    if (data.bufferCapacidad !== undefined) this.bufferCapacidad = data.bufferCapacidad;
-    if (data.totalProcesados !== undefined) this.totalProcesados = data.totalProcesados;
-    if (data.totalBloqueados !== undefined) this.totalBloqueados = data.totalBloqueados;
+    if (data.mutexPermisos  !== undefined) this.mutex           = data.mutexPermisos;
+    if (data.vaciasPermisos !== undefined) this.vacias          = data.vaciasPermisos;
+    if (data.llenasPermisos !== undefined) this.llenas          = data.llenasPermisos;
+    if (data.itemsEnCola    !== undefined) this.bufferSize      = data.itemsEnCola;
+    if (data.capacidad      !== undefined) this.bufferCapacidad = data.capacidad;
+    if (data.totalConsumidas !== undefined) this.totalProcesados = data.totalConsumidas;
+    if (data.totalBloqueosConsumidor !== undefined) this.totalBloqueados = data.totalBloqueosConsumidor;
 
-    if (data.mensaje) {
-      this.agregarLog(data.mensaje, data.tipo ?? 'info');
+    if (data.ultimoEvento) {
+      this.agregarLog(data.ultimoEvento, this.tipoDeEvento(data.ultimoEvento));
     }
-  }
+}
 
   private agregarLog(evento: string, tipo: TipoLog): void {
     const now = new Date();
