@@ -47,4 +47,8 @@ export class SalaListComponent implements OnInit {
   etiquetaSala(id: number): string {
     return ({ 1: 'ESTRENO', 2: 'EN CARTELERA', 3: 'CLÁSICA' } as Record<number,string>)[id] ?? '';
   }
+
+  irAMonitor(): void {
+    this.router.navigate(['/semaforos']);
+  }
 }

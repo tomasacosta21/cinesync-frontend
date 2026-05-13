@@ -1,0 +1,162 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <header class="monitor-header">
+    <div class="header-content">
+      <p class="header-eyebrow">Monitor de concurrencia</p>
+      <h1 class="header-titulo">SEMÁFOROS</h1>
+      <p class="header-sub">Productor / Consumidor — Buffer acotado</p>
+    </div>
+    <div class="sse-badge sse-badge--activo">
+      <span class="sse-dot"></span>
+      <span>SSE activo</span>
+    </div>
+  </header>
+
+  <!-- ── Cards de semáforos ──────────────────────────────────── -->
+  <section class="semaforos-grid">
+
+    <div class="sem-card" [class.sem-card--bloqueado]="mutexBloqueado">
+      <div class="sem-card-header">
+        <span class="sem-label">MUTEX</span>
+        <span class="sem-badge"
+          [class.sem-badge--libre]="!mutexBloqueado"
+          [class.sem-badge--bloqueado]="mutexBloqueado">
+          {{ mutexBloqueado ? 'BLOQUEADO' : 'LIBRE' }}
+        </span>
+      </div>
+      <div class="sem-valor">{{ mutex }}</div>
+      <div class="sem-bar-wrap">
+        <div class="sem-bar">
+          <div class="sem-fill" [style.width]="(mutex * 100) + '%'"></div>
+        </div>
+        <span class="sem-max">/ 1</span>
+      </div>
+      <p class="sem-desc">Exclusión mutua del buffer</p>
+    </div>
+
+    <div class="sem-card" [class.sem-card--bloqueado]="vaciasBloqueado">
+      <div class="sem-card-header">
+        <span class="sem-label">VACÍAS</span>
+        <span class="sem-badge"
+          [class.sem-badge--libre]="!vaciasBloqueado"
+          [class.sem-badge--bloqueado]="vaciasBloqueado">
+          {{ vaciasBloqueado ? 'BLOQUEADO' : 'LIBRE' }}
+        </span>
+      </div>
+      <div class="sem-valor">{{ vacias }}</div>
+      <div class="sem-bar-wrap">
+        <div class="sem-bar">
+          <div class="sem-fill sem-fill--vacias"
+            [style.width]="((vacias / bufferCapacidad) * 100) + '%'"></div>
+        </div>
+        <span class="sem-max">/ {{ bufferCapacidad }}</span>
+      </div>
+      <p class="sem-desc">Slots libres para producir</p>
+    </div>
+
+    <div class="sem-card" [class.sem-card--bloqueado]="llenasBloqueado">
+      <div class="sem-card-header">
+        <span class="sem-label">LLENAS</span>
+        <span class="sem-badge"
+          [class.sem-badge--libre]="!llenasBloqueado"
+          [class.sem-badge--bloqueado]="llenasBloqueado">
+          {{ llenasBloqueado ? 'BLOQUEADO' : 'LIBRE' }}
+        </span>
+      </div>
+      <div class="sem-valor">{{ llenas }}</div>
+      <div class="sem-bar-wrap">
+        <div class="sem-bar">
+          <div class="sem-fill sem-fill--llenas"
+            [style.width]="((llenas / bufferCapacidad) * 100) + '%'"></div>
+        </div>
+        <span class="sem-max">/ {{ bufferCapacidad }}</span>
+      </div>
+      <p class="sem-desc">Items listos para consumir</p>
+    </div>
+
+  </section>
+
+  <!-- ── Buffer visual ───────────────────────────────────────── -->
+  <section class="buffer-section">
+    <div class="section-header">
+      <h2 class="section-titulo">BUFFER</h2>
+      <span class="buffer-contador">{{ bufferSize }} / {{ bufferCapacidad }}</span>
+    </div>
+    <div class="buffer-slots">
+      <div
+        *ngFor="let ocupado of bufferSlots; let i = index"
+        class="buffer-slot"
+        [class.buffer-slot--ocupado]="ocupado"
+        [class.buffer-slot--libre]="!ocupado"
+        [title]="'Slot ' + (i + 1) + ': ' + (ocupado ? 'ocupado' : 'libre')"
+      >
+        <span class="slot-num">{{ i + 1 }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Controles y stats ────────────────────────────────────── -->
+  <section class="controles-stats">
+
+    <div class="controles">
+      <h2 class="section-titulo">CONTROLES</h2>
+      <div class="btn-group">
+        <button class="btn-encolar" (click)="encolarUno()">
+          <span class="btn-icon">+</span>
+          Encolar uno
+        </button>
+        <button class="btn-encolar btn-encolar--lote" (click)="encolarLote()">
+          <span class="btn-icon">⊕</span>
+          Encolar lote (8)
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-panel">
+      <h2 class="section-titulo">TOTALES</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-val stat-val--ok">{{ totalProcesados }}</span>
+          <span class="stat-lbl">procesados</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val stat-val--bloq">{{ totalBloqueados }}</span>
+          <span class="stat-lbl">bloqueos</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── Log en tiempo real ──────────────────────────────────── -->
+  <section class="log-section">
+    <div class="section-header">
+      <h2 class="section-titulo">LOG EN TIEMPO REAL</h2>
+      <span class="log-count">{{ log.length }} / 50</span>
+    </div>
+    <div class="log-list">
+      <div
+        *ngFor="let entry of log"
+        class="log-entry"
+        [class]="'log-entry log-entry--' + entry.tipo"
+      >
+        <span class="log-tiempo">{{ entry.tiempo }}</span>
+        <span class="log-tipo-badge">{{ entry.tipo }}</span>
+        <span class="log-evento">{{ entry.evento }}</span>
+      </div>
+      <div class="log-empty" *ngIf="log.length === 0">
+        <span>Esperando eventos SSE...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ───────────────────────────────────────────────── -->
+  <footer class="page-footer">
+    <span>CineSync · Monitor de Semáforos</span>
+    <span class="footer-dot">·</span>
+    <span>Programación Concurrente — UNRN</span>
+  </footer>
+
+</div>
