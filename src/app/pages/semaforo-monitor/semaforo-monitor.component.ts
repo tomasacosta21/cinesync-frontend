@@ -9,6 +9,17 @@ interface LogEntry {
   tiempo: string;
   evento: string;
   tipo: TipoLog;
+  explicacion: string;
+}
+
+interface ConsumerWorker {
+  id: number;
+  procesando: boolean;
+}
+
+interface Particula {
+  id: number;
+  direction: 'in' | 'out';
 }
 
 @Component({
@@ -34,6 +45,17 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
   totalProcesados = 0;
   totalBloqueados = 0;
 
+  workers: ConsumerWorker[] = [
+    { id: 1, procesando: false },
+    { id: 2, procesando: false },
+    { id: 3, procesando: false },
+    { id: 4, procesando: false }
+  ];
+
+  particulas: Particula[] = [];
+  private particulaSeq = 0;
+  private workerIdx = 0;
+
   get mutexBloqueado(): boolean { return this.mutex === 0; }
   get vaciasBloqueado(): boolean { return this.vacias === 0; }
   get llenasBloqueado(): boolean { return this.llenas === 0; }
@@ -56,12 +78,65 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
     if (this.reconectarTimeout) clearTimeout(this.reconectarTimeout);
   }
 
+  trackParticula = (_: number, p: Particula): number => p.id;
+  trackWorker    = (_: number, w: ConsumerWorker): number => w.id;
+
   private tipoDeEvento(evento: string): TipoLog {
     if (evento.includes('BLOQUEADO'))  return 'bloqueado';
     if (evento.includes('PRODUCIDO'))  return 'encolado';
     if (evento.includes('PROCESANDO')) return 'procesando';
     if (evento.includes('CONSUMIDO'))  return 'completado';
     return 'info';
+  }
+
+  private explicacionDe(evento: string): string {
+    if (evento.includes('PRODUCIDO'))  return 'Productor ejecutó vacias.acquire() y depositó en buffer';
+    if (evento.includes('CONSUMIDO'))  return 'Consumidor retiró del buffer y liberó un slot';
+    if (evento.includes('PROCESANDO')) return 'Worker en sección crítica — mutex tomado';
+    if (evento.includes('BLOQUEADO')) {
+      const e = evento.toLowerCase();
+      if (e.includes('productor') || e.includes('vacias') || e.includes('lleno')) {
+        return 'Buffer lleno — productor suspendido en vacias.acquire()';
+      }
+      return 'Buffer vacío — worker suspendido en llenas.acquire()';
+    }
+    return '';
+  }
+
+  private animarEvento(evento: string): void {
+    if (evento.includes('PRODUCIDO')) {
+      this.spawnParticula('in');
+    } else if (evento.includes('CONSUMIDO')) {
+      this.spawnParticula('out');
+      this.liberarWorker();
+    } else if (evento.includes('PROCESANDO')) {
+      this.activarWorker();
+    }
+  }
+
+  private spawnParticula(direction: 'in' | 'out'): void {
+    const id = ++this.particulaSeq;
+    this.particulas = [...this.particulas, { id, direction }];
+    setTimeout(() => {
+      this.zone.run(() => {
+        this.particulas = this.particulas.filter(p => p.id !== id);
+      });
+    }, 850);
+  }
+
+  private activarWorker(): void {
+    const libre = this.workers.find(w => !w.procesando);
+    const target = libre ?? this.workers[this.workerIdx % this.workers.length];
+    this.workerIdx++;
+    target.procesando = true;
+    setTimeout(() => {
+      this.zone.run(() => { target.procesando = false; });
+    }, 900);
+  }
+
+  private liberarWorker(): void {
+    const idx = this.workers.findIndex(w => w.procesando);
+    if (idx >= 0) this.workers[idx].procesando = false;
   }
 
   private conectarSSE(): void {
@@ -98,6 +173,7 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
 
     if (data.ultimoEvento) {
       this.agregarLog(data.ultimoEvento, this.tipoDeEvento(data.ultimoEvento));
+      this.animarEvento(data.ultimoEvento);
     }
 }
 
@@ -105,7 +181,8 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const tiempo = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    this.log.unshift({ tiempo, evento, tipo });
+    const explicacion = this.explicacionDe(evento);
+    this.log.unshift({ tiempo, evento, tipo, explicacion });
     if (this.log.length > 50) this.log.pop();
   }
 

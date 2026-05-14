@@ -96,6 +96,65 @@
     </div>
   </section>
 
+  <!-- ── Flujo animado Productor / Consumidor ────────────────── -->
+  <section class="flujo-section">
+    <div class="section-header">
+      <h2 class="section-titulo">FLUJO PRODUCTOR / CONSUMIDOR</h2>
+      <span class="flujo-leyenda">items viajando en tiempo real</span>
+    </div>
+
+    <div class="flujo-canvas">
+
+      <!-- Zona Productores -->
+      <div class="flujo-zona flujo-zona--prod">
+        <span class="zona-label">PRODUCTORES</span>
+        <div class="prod-fuente" [class.prod-fuente--bloqueado]="vaciasBloqueado">P</div>
+        <div class="prod-bloqueado" *ngIf="vaciasBloqueado">
+          <span class="bloq-icon">⨯</span>
+          <span class="bloq-text">BLOQUEADO</span>
+          <span class="bloq-detalle">vacias.acquire()</span>
+        </div>
+      </div>
+
+      <!-- Zona Buffer -->
+      <div class="flujo-zona flujo-zona--buffer">
+        <span class="zona-label">BUFFER ({{ bufferSize }}/{{ bufferCapacidad }})</span>
+        <div class="flujo-buffer-slots">
+          <div
+            *ngFor="let ocupado of bufferSlots"
+            class="flujo-slot"
+            [class.flujo-slot--ocupado]="ocupado">
+          </div>
+        </div>
+      </div>
+
+      <!-- Zona Consumidores -->
+      <div class="flujo-zona flujo-zona--cons">
+        <span class="zona-label">CONSUMIDORES</span>
+        <div class="workers-grid">
+          <div
+            *ngFor="let w of workers; trackBy: trackWorker"
+            class="worker"
+            [class.worker--procesando]="w.procesando"
+            [class.worker--bloqueado]="!w.procesando && llenasBloqueado">
+            <span class="worker-id">W{{ w.id }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Capa de partículas animadas (overlay absoluto) -->
+      <div class="flujo-particulas" aria-hidden="true">
+        <div
+          *ngFor="let p of particulas; trackBy: trackParticula"
+          class="particula"
+          [class.particula--in]="p.direction === 'in'"
+          [class.particula--out]="p.direction === 'out'">
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ── Controles y stats ────────────────────────────────────── -->
   <section class="controles-stats">
 
@@ -145,6 +204,7 @@
         <span class="log-tiempo">{{ entry.tiempo }}</span>
         <span class="log-tipo-badge">{{ entry.tipo }}</span>
         <span class="log-evento">{{ entry.evento }}</span>
+        <span class="log-explicacion">{{ entry.explicacion }}</span>
       </div>
       <div class="log-empty" *ngIf="log.length === 0">
         <span>Esperando eventos SSE...</span>
