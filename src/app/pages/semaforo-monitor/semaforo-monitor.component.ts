@@ -12,14 +12,23 @@ interface LogEntry {
   explicacion: string;
 }
 
-interface ConsumerWorker {
-  id: number;
-  procesando: boolean;
-}
-
 interface Particula {
   id: number;
   direction: 'in' | 'out';
+}
+
+type WorkerEstado = 'activo' | 'bloqueado' | 'idle';
+
+interface EstadoSemaforos {
+  mutexPermisos?: number;
+  vaciasPermisos?: number;
+  llenasPermisos?: number;
+  itemsEnCola?: number;
+  capacidad?: number;
+  totalConsumidas?: number;
+  totalBloqueosConsumidor?: number;
+  ultimoEvento?: string;
+  workerId: string | null;
 }
 
 @Component({
@@ -45,16 +54,11 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
   totalProcesados = 0;
   totalBloqueados = 0;
 
-  workers: ConsumerWorker[] = [
-    { id: 1, procesando: false },
-    { id: 2, procesando: false },
-    { id: 3, procesando: false },
-    { id: 4, procesando: false }
-  ];
+  workers = new Map<string, WorkerEstado>();
+  workerIds: string[] = [];
 
   particulas: Particula[] = [];
   private particulaSeq = 0;
-  private workerIdx = 0;
 
   get mutexBloqueado(): boolean { return this.mutex === 0; }
   get vaciasBloqueado(): boolean { return this.vacias === 0; }
@@ -79,7 +83,15 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
   }
 
   trackParticula = (_: number, p: Particula): number => p.id;
-  trackWorker    = (_: number, w: ConsumerWorker): number => w.id;
+  trackWorkerId  = (_: number, id: string): string => id;
+
+  workerEstado(id: string): WorkerEstado {
+    return this.workers.get(id) ?? 'idle';
+  }
+
+  workerNombreCorto(id: string): string {
+    return id.length > 6 ? id.slice(-6) : id;
+  }
 
   private tipoDeEvento(evento: string): TipoLog {
     if (evento.includes('BLOQUEADO'))  return 'bloqueado';
@@ -108,9 +120,6 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
       this.spawnParticula('in');
     } else if (evento.includes('CONSUMIDO')) {
       this.spawnParticula('out');
-      this.liberarWorker();
-    } else if (evento.includes('PROCESANDO')) {
-      this.activarWorker();
     }
   }
 
@@ -122,21 +131,6 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
         this.particulas = this.particulas.filter(p => p.id !== id);
       });
     }, 850);
-  }
-
-  private activarWorker(): void {
-    const libre = this.workers.find(w => !w.procesando);
-    const target = libre ?? this.workers[this.workerIdx % this.workers.length];
-    this.workerIdx++;
-    target.procesando = true;
-    setTimeout(() => {
-      this.zone.run(() => { target.procesando = false; });
-    }, 900);
-  }
-
-  private liberarWorker(): void {
-    const idx = this.workers.findIndex(w => w.procesando);
-    if (idx >= 0) this.workers[idx].procesando = false;
   }
 
   private conectarSSE(): void {
@@ -162,7 +156,7 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
     };
   }
 
-  private aplicarEvento(data: any): void {
+  private aplicarEvento(data: EstadoSemaforos): void {
     if (data.mutexPermisos  !== undefined) this.mutex           = data.mutexPermisos;
     if (data.vaciasPermisos !== undefined) this.vacias          = data.vaciasPermisos;
     if (data.llenasPermisos !== undefined) this.llenas          = data.llenasPermisos;
@@ -170,6 +164,20 @@ export class SemaforoMonitorComponent implements OnInit, OnDestroy {
     if (data.capacidad      !== undefined) this.bufferCapacidad = data.capacidad;
     if (data.totalConsumidas !== undefined) this.totalProcesados = data.totalConsumidas;
     if (data.totalBloqueosConsumidor !== undefined) this.totalBloqueados = data.totalBloqueosConsumidor;
+
+    const wid = data.workerId;
+    if (wid && data.ultimoEvento) {
+      if (!this.workerIds.includes(wid)) {
+        this.workerIds = [...this.workerIds, wid];
+      }
+      if (data.ultimoEvento.includes('PROCESANDO')) {
+        this.workers.set(wid, 'activo');
+      } else if (data.ultimoEvento.includes('CONSUMIDO')) {
+        this.workers.set(wid, 'idle');
+      } else if (data.ultimoEvento.includes('BLOQUEADO')) {
+        this.workers.set(wid, 'bloqueado');
+      }
+    }
 
     if (data.ultimoEvento) {
       this.agregarLog(data.ultimoEvento, this.tipoDeEvento(data.ultimoEvento));

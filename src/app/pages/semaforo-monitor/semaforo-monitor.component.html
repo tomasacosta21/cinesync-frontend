@@ -132,13 +132,20 @@
       <div class="flujo-zona flujo-zona--cons">
         <span class="zona-label">CONSUMIDORES</span>
         <div class="workers-grid">
-          <div
-            *ngFor="let w of workers; trackBy: trackWorker"
-            class="worker"
-            [class.worker--procesando]="w.procesando"
-            [class.worker--bloqueado]="!w.procesando && llenasBloqueado">
-            <span class="worker-id">W{{ w.id }}</span>
-          </div>
+          <ng-container *ngIf="workerIds.length; else sinWorkers">
+            <div
+              *ngFor="let wid of workerIds; trackBy: trackWorkerId"
+              class="worker"
+              [class.worker--activo]="workerEstado(wid) === 'activo'"
+              [class.worker--bloqueado]="workerEstado(wid) === 'bloqueado'"
+              [class.worker--idle]="workerEstado(wid) === 'idle'"
+              [title]="wid + ' · ' + workerEstado(wid)">
+              <span class="worker-id">{{ workerNombreCorto(wid) }}</span>
+            </div>
+          </ng-container>
+          <ng-template #sinWorkers>
+            <span class="workers-vacios">esperando workers…</span>
+          </ng-template>
         </div>
       </div>
 
