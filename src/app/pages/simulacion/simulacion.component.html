@@ -1,0 +1,148 @@
+<div class="sim-page">
+
+  <!-- ══ Header ══════════════════════════════════════════ -->
+  <header class="sim-header">
+    <div class="header-izq">
+      <button class="btn-back" (click)="volver()">
+        <span class="btn-back-arrow">←</span> Salas
+      </button>
+      <div class="header-info">
+        <div class="header-eyebrow">Laboratorio de concurrencia</div>
+        <h1 class="header-titulo">Simulación Comparativa</h1>
+      </div>
+    </div>
+    <div class="header-der">
+      <span class="header-sub">CAS · ReentrantLock · synchronized — Sala Estrenos (120 butacas)</span>
+    </div>
+  </header>
+
+  <!-- ══ Panel de control ════════════════════════════════ -->
+  <section class="panel-control">
+    <div class="control-grupo">
+      <label class="control-label">Escenario</label>
+      <div class="control-opciones">
+        <button *ngFor="let esc of escenarios"
+                class="chip"
+                [class.activo]="escenario === esc.valor"
+                [disabled]="corriendo"
+                [title]="esc.detalle"
+                (click)="escenario = esc.valor">
+          {{ esc.etiqueta }}
+        </button>
+      </div>
+    </div>
+
+    <div class="control-grupo">
+      <label class="control-label">Workers</label>
+      <div class="control-opciones">
+        <button *ngFor="let op of opcionesWorkers"
+                class="chip"
+                [class.activo]="workers === op.valor"
+                [disabled]="corriendo"
+                (click)="workers = op.valor">
+          {{ op.etiqueta }}
+        </button>
+      </div>
+    </div>
+
+    <div class="control-grupo control-acciones">
+      <button class="btn-iniciar" [disabled]="corriendo" (click)="iniciar()">
+        {{ corriendo ? 'Simulando…' : 'Iniciar Simulación' }}
+      </button>
+      <button class="btn-exportar" *ngIf="exportable" (click)="exportarExcel()">
+        ⬇ Exportar Excel
+      </button>
+    </div>
+
+    <!-- Indicador de técnica activa + progreso -->
+    <div class="control-grupo control-estado" *ngIf="corriendo || progreso > 0">
+      <div class="tecnica-indicador">
+        <span class="tecnica-chip"
+              [class.cas]="tecnicaActiva === 'CAS_ATOMICO'"
+              [class.lock]="tecnicaActiva === 'REENTRANT_LOCK'"
+              [class.sync]="tecnicaActiva === 'SYNCHRONIZED'">
+          {{ etiquetaTecnica(tecnicaActiva) }}
+        </span>
+        <span class="tecnica-detalle" *ngIf="tecnicaActiva">
+          {{ workersActivos }} worker{{ workersActivos === 1 ? '' : 's' }}
+        </span>
+      </div>
+      <div class="barra-progreso">
+        <div class="barra-relleno" [style.width.%]="progreso"></div>
+      </div>
+      <span class="progreso-texto">{{ progreso }}%</span>
+    </div>
+  </section>
+
+  <p class="error-msg" *ngIf="errorMsg">{{ errorMsg }}</p>
+
+  <div class="sim-cuerpo">
+
+    <!-- ══ Grilla de butacas ═════════════════════════════ -->
+    <section class="grilla-panel">
+      <div class="pantalla">PANTALLA</div>
+      <div class="grilla" [class.reseteando]="reseteando"
+           [style.grid-template-columns]="'repeat(' + COLUMNAS + ', 1fr)'">
+        <div *ngFor="let b of butacas; trackBy: trackButaca"
+             class="butaca"
+             [ngClass]="clasePara(b)"
+             [title]="b.id">
+        </div>
+      </div>
+
+      <div class="leyenda">
+        <span class="leyenda-item"><i class="muestra libre"></i> Libre</span>
+        <span class="leyenda-item"><i class="muestra en-proceso"></i> En proceso</span>
+        <span class="leyenda-item"><i class="muestra ocupada-cas"></i> CAS</span>
+        <span class="leyenda-item"><i class="muestra ocupada-lock"></i> Lock</span>
+        <span class="leyenda-item"><i class="muestra ocupada-sync"></i> Sync</span>
+      </div>
+    </section>
+
+    <!-- ══ Métricas en tiempo real ═══════════════════════ -->
+    <section class="metricas-panel">
+      <h2 class="metricas-titulo">Métricas <span class="metricas-sub">(promedio de 5 corridas)</span></h2>
+
+      <div class="tabla-wrapper">
+        <table class="tabla-metricas">
+          <thead>
+            <tr>
+              <th>Técnica</th>
+              <th>W</th>
+              <th>Wall Clock<br>(ms)</th>
+              <th>Throughput<br>(req/s)</th>
+              <th>Exitosas</th>
+              <th>Fallidas</th>
+              <th>Conflictos</th>
+              <th>Lat. Prom<br>(ms)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of filasMetricas" class="fila-metrica">
+              <td>
+                <span class="tecnica-chip mini"
+                      [class.cas]="m.tecnica === 'CAS_ATOMICO'"
+                      [class.lock]="m.tecnica === 'REENTRANT_LOCK'"
+                      [class.sync]="m.tecnica === 'SYNCHRONIZED'">
+                  {{ etiquetaTecnica(m.tecnica) }}
+                </span>
+              </td>
+              <td>{{ m.workers }}</td>
+              <td>{{ m.wallClockTimeMs }}</td>
+              <td>{{ m.throughput | number:'1.0-0' }}</td>
+              <td>{{ m.reservasExitosas }}</td>
+              <td>{{ m.reservasFallidas }}</td>
+              <td>{{ m.conflictosDetectados }}</td>
+              <td>{{ m.latenciaPromedioMs | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="!filasMetricas.length">
+              <td colspan="8" class="tabla-vacia">
+                Iniciá una simulación para ver las métricas en tiempo real.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

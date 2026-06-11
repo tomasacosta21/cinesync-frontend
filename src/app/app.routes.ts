@@ -22,5 +22,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/semaforo-monitor/semaforo-monitor.component').then(m => m.SemaforoMonitorComponent)
   },
+  {
+    path: 'simulacion',
+    loadComponent: () =>
+      import('./pages/simulacion/simulacion.component').then(m => m.SimulacionComponent)
+  },
   { path: '**', redirectTo: 'salas' }
 ];
