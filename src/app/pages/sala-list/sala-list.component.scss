@@ -337,6 +337,51 @@
   transition: transform var(--dur-med) var(--ease-out);
 }
 
+/* ── Laboratorio de simulación ───────────── */
+.btn-simulacion-wrap {
+  padding: 24px 48px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--gris-borde);
+  background: var(--negro-sala);
+}
+
+.btn-simulacion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #60a5fa;
+  color: #60a5fa;
+  padding: 14px 32px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--dur-fast);
+
+  &:hover {
+    background: rgba(96, 165, 250, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:active { transform: translateY(0); }
+}
+
+.btn-simulacion-texto {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  color: var(--blanco);
+}
+
+.btn-simulacion-sub {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gris-texto);
+}
+
 /* ── Footer ──────────────────────────────── */
 .page-footer {
   padding: 20px 48px;

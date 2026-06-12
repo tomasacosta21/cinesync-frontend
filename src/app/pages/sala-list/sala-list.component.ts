@@ -51,4 +51,8 @@ export class SalaListComponent implements OnInit {
   irAMonitor(): void {
     this.router.navigate(['/semaforos']);
   }
+
+  irASimulacion(): void {
+    this.router.navigate(['/simulacion']);
+  }
 }
